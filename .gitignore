@@ -6,4 +6,4 @@
 src/secrets.h
 src/CACert.ino
 src/CertToESP8266.py
-src/MattGistCert.cer
+src/LoveNoteCert.cer

@@ -40,31 +40,32 @@ void drawMessage(const String &message)
 {
   oled.clear();
 
-  if (modeSelector[0] == 't')
-  {
+//  if (modeSelector[0] == 't')
+//  {
     oled.drawString(0, 0, message.c_str());
-  }
-  else
-  {
-    for (int i = 0; i <= message.length(); i++)
-    {
-      int x = i % 129;
-      int y = i / 129;
-
-      if (message[i] == '1')
-      {
-        oled.draw1x2Glyph(x, y, 1);
-      }
-    }
-  }
+//  }
+//  else
+//  {
+//    for (int i = 0; i <= message.length(); i++)
+//    {
+//      int x = i % 129;
+//      int y = i / 129;
+//
+//      if (message[i] == '1')
+//      {
+//        oled.draw1x2Glyph(x, y, 1);
+//      }
+//    }
+//  }
   oled.display();
+  wasMessageRead = true;
 }
 
 void waitForMessage()
 {
   Serial.println("in message function");
   const int httpsPort = 443;
-  const char *host = "api.github.com";
+  const char *host = "love-note-backend.herokuapp.com";
   Serial.print("Looking to host ");
   Serial.println(host);
 
@@ -96,20 +97,15 @@ void waitForMessage()
     }
   }
 
-  String line = client.readStringUntil('\n');
-  if (line.startsWith("{\"state\":\"success\""))
-  {
-    Serial.println("esp8266/Arduino CI successfull!");
-  }
-  else
-  {
-    Serial.println("esp8266/Arduino CI has failed");
-  }
+  String line = client.readString();
   Serial.println("reply was:");
   Serial.println("==========");
   Serial.println(line);
   Serial.println("==========");
   Serial.println("closing connection");
+
+  Serial.println("Drawing new message");
+  drawMessage(line);
 }
 
 void setup()

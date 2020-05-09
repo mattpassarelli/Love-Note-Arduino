@@ -1,13 +1,14 @@
 //
 // Love Box
 //
-#include <U8x8lib.h>
+#include "SH1106Wire.h"
 #include <ESP8266WiFi.h>
 #include <EEPROM.h>
 #include <WiFiClientSecure.h>
 #include "secrets.h"
 
-U8X8_SH1106_128X64_NONAME_HW_I2C oled(/* reset=*/U8X8_PIN_NONE);
+SH1106Wire oled(0x3c, D2, D1);
+int SCREEN_WIDTH = 128;
 bool isConnectedToWifi = false;
 bool wasMessageRead = false;
 char idSaved = -1;
@@ -26,7 +27,7 @@ void wifiConnect()
 {
   if (WiFi.status() != WL_CONNECTED)
   {
-    oled.drawString(0, 0, "Connecting to WiFi network...");
+    oled.drawStringMaxWidth(0, 0,  SCREEN_WIDTH, "Connecting to WiFi network...");
     WiFi.begin(ssid, password);
 
     while (WiFi.status() != WL_CONNECTED)
@@ -42,7 +43,7 @@ void drawMessage(const String &message)
 
 //  if (modeSelector[0] == 't')
 //  {
-    oled.drawString(0, 0, message.c_str());
+    oled.drawStringMaxWidth(0, 0,  SCREEN_WIDTH, message.c_str());
 //  }
 //  else
 //  {
@@ -111,17 +112,19 @@ void waitForMessage()
 void setup()
 {
   Serial.begin(9600);
-  oled.begin();
-  oled.setFont(u8x8_font_victoriamedium8_r);
-  oled.clear();
-  oled.drawString(0, 0, "Hello :)");
+  oled.init();
+  oled.flipScreenVertically();
+  oled.setColor(WHITE);
+  oled.setTextAlignment(TEXT_ALIGN_LEFT);
+  oled.setFont(ArialMT_Plain_16);
+  oled.drawStringMaxWidth(0, 0,  SCREEN_WIDTH, "Hello :)");
 
   delay(1000);
 
   wifiConnect();
 
   oled.clear();
-  oled.drawString(0, 0, "Setting up...");
+  oled.drawStringMaxWidth(0, 0,  SCREEN_WIDTH, "Setting up...");
   oled.display();
 
   // Synchronize time useing SNTP. This is necessary to verify that
@@ -163,7 +166,7 @@ void loop()
   {
     Serial.println("Waiting for message");
     oled.clear();
-    oled.drawString(0, 0, "Waiting for a message");
+    oled.drawStringMaxWidth(0, 0,  SCREEN_WIDTH, "Waiting for a message");
     oled.display();
 
     waitForMessage();

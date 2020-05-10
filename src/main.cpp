@@ -5,6 +5,7 @@
 #include <ESP8266WiFi.h>
 #include <EEPROM.h>
 #include <WiFiClientSecure.h>
+#include <ArduinoJson.h>
 #include "secrets.h"
 #include "FastLED.h"
 
@@ -28,6 +29,9 @@ int brightness = 0;
 
 const int readMessagePin = D5;
 const int LEDPin = D7;
+
+const size_t capacity = JSON_OBJECT_SIZE(2) + 100;
+DynamicJsonDocument doc(capacity);
 
 // Defined in "CACert" tab.
 extern const unsigned char caCert[] PROGMEM;
@@ -72,11 +76,40 @@ void drawMessage(const String &message)
   wasMessageRead = false;
 }
 
+void parseJSON(String line)
+{
+  const char *json = line.c_str();
+
+  deserializeJson(doc, json);
+
+  // Parameters
+  int id = doc["id"];
+  const char *message = doc["message"];
+
+  //  String str = String(*message);
+
+  Serial.print("id: ");
+  Serial.println(id);
+  Serial.print("Message:");
+  Serial.println(message);
+  //  Serial.println(str);
+
+  //Check ID against what is stored in EEPROM, so we don't grab the message we just read
+  //if matches and is above 0 (default is -1)
+  //do nothing, keep checking
+  //else it doesn't
+  //store new ID in ROM
+  //Draw message
+  Serial.println("Drawing Message");
+  drawMessage(message);
+}
+
 void waitForMessage()
 {
   Serial.println("in message function");
   const int httpsPort = 443;
   const char *host = "love-note-backend.herokuapp.com";
+
   Serial.print("Looking to host ");
   Serial.println(host);
 
@@ -108,15 +141,15 @@ void waitForMessage()
     }
   }
 
-  String line = client.readString();
+  String line = client.readStringUntil('\r');
   Serial.println("reply was:");
   Serial.println("==========");
   Serial.println(line);
   Serial.println("==========");
   Serial.println("closing connection");
 
-  Serial.println("Drawing new message");
-  drawMessage(line);
+  Serial.println("Parsing JSON");
+  parseJSON(line);
 }
 
 void setup()
@@ -137,6 +170,7 @@ void setup()
   oled.drawStringMaxWidth(0, 0, SCREEN_WIDTH, "Setting up...");
   oled.display();
 
+  //TODO: Do I still need this??
   // Synchronize time using SNTP. This is necessary to verify that
   // the TLS certificates offered by the server are currently valid.
   Serial.print("Setting time using SNTP");

@@ -10,33 +10,41 @@
 #include "FastLED.h"
 
 #define NUM_LEDS 18
+#define ID_ADDR 142
+#define READ_ADDR 144
 
+//Object definitions
 CRGB leds[NUM_LEDS];
 SH1106Wire oled(0x3c, D2, D1);
+WiFiClientSecure client;
+const size_t capacity = JSON_OBJECT_SIZE(2) + 100;
+DynamicJsonDocument doc(capacity);
+
+//Consts
+const int readMessagePin = D5;
+const int LEDPin = D7;
 const int SCREEN_WIDTH = 128;
-bool isConnectedToWifi = false;
-bool wasMessageRead = true;
-char idSaved = -1;
-String line;
-String modeSelector;
 const char *ssid = _ssid;
 const char *password = _password;
 const String url = _url;
-WiFiClientSecure client;
+const char *host = "love-note-backend.herokuapp.com";
 
+//Other variables
 int fadeAmount = 5;
 int brightness = 0;
-
-const int readMessagePin = D5;
-const int LEDPin = D7;
-
-const size_t capacity = JSON_OBJECT_SIZE(2) + 100;
-DynamicJsonDocument doc(capacity);
+bool isConnectedToWifi = false;
+bool wasMessageRead = true;
+char idSaved = 0;
+String line;
+String modeSelector;
 
 // Defined in "CACert" tab.
 extern const unsigned char caCert[] PROGMEM;
 extern const unsigned int caCertLen;
 
+/**
+ *  Connect to WiFi networked defined in secrets.h
+ **/
 void wifiConnect()
 {
   if (WiFi.status() != WL_CONNECTED)
@@ -51,6 +59,9 @@ void wifiConnect()
   }
 }
 
+/**
+ *  Display the message on screen
+ **/
 void drawMessage(const String &message)
 {
   oled.clear();
@@ -73,9 +84,11 @@ void drawMessage(const String &message)
   //    }
   //  }
   oled.display();
-  wasMessageRead = false;
 }
 
+/**
+ * Parse the JSON we get from my server
+ **/
 void parseJSON(String line)
 {
   const char *json = line.c_str();
@@ -95,20 +108,61 @@ void parseJSON(String line)
   //  Serial.println(str);
 
   //Check ID against what is stored in EEPROM, so we don't grab the message we just read
-  //if matches and is above 0 (default is -1)
+  //if matches and is above 0 (default is 0)
   //do nothing, keep checking
   //else it doesn't
   //store new ID in ROM
   //Draw message
-  Serial.println("Drawing Message");
-  drawMessage(message);
+
+  Serial.println("Comparing Message ID to ID in ROM");
+  Serial.print("IDs are ");
+  Serial.print(id);
+  Serial.print(" and ");
+  Serial.println(EEPROM.read(ID_ADDR));
+
+  if (id == EEPROM.read(ID_ADDR))
+  {
+    Serial.println("IDs matched. Same message as before. Not displaying message");
+    //Also turn the screen off now until we get a new message
+    Serial.println("Turning off display");
+    oled.clear();
+    oled.drawStringMaxWidth(0, 0, SCREEN_WIDTH, "Turning off screen until new message arrives");
+    oled.display();
+    
+    delay(15000);
+    oled.displayOff();
+    //Wait a full minute to ping again to save bandwidth to my server
+    delay(45000);
+  }
+  else
+  {
+
+    Serial.println("IDs are different. New message");
+    Serial.println("Saving new ID");
+    EEPROM.write(ID_ADDR, id);
+
+    Serial.println("Setting wasMessageRead to false in memory");
+    EEPROM.write(READ_ADDR, false);
+    wasMessageRead = false;
+
+    EEPROM.commit();
+    Serial.print("ID Saved: ");
+    Serial.println(EEPROM.read(ID_ADDR));
+
+    Serial.println("Drawing Message");
+    oled.displayOn();
+    drawMessage(message);
+  }
 }
 
+/**
+ * Is Run every minute
+ * Pings my backend server for the newest message as a 
+ * */
 void waitForMessage()
 {
   Serial.println("in message function");
   const int httpsPort = 443;
-  const char *host = "love-note-backend.herokuapp.com";
 
   Serial.print("Looking to host ");
   Serial.println(host);
@@ -161,16 +215,15 @@ void setup()
   oled.setTextAlignment(TEXT_ALIGN_LEFT);
   oled.setFont(ArialMT_Plain_16);
   oled.drawStringMaxWidth(0, 0, SCREEN_WIDTH, "Hello :)");
-
   delay(1000);
 
+  //Connect to WiFi
   wifiConnect();
 
   oled.clear();
   oled.drawStringMaxWidth(0, 0, SCREEN_WIDTH, "Setting up...");
   oled.display();
 
-  //TODO: Do I still need this??
   // Synchronize time using SNTP. This is necessary to verify that
   // the TLS certificates offered by the server are currently valid.
   Serial.print("Setting time using SNTP");
@@ -211,11 +264,19 @@ void setup()
   }
   FastLED.show();
 
-  // EEPROM.begin(512);
-  // idSaved = EEPROM.get(142, idSaved);
-  // wasMessageRead = EEPROM.get(144, wasMessageRead);
+  //EEPROM Stuff
+  Serial.println("Starting EEPROM stuff");
+  EEPROM.begin(512);
+  idSaved = EEPROM.read(ID_ADDR);
+  wasMessageRead = EEPROM.read(READ_ADDR);
+  Serial.println("Retreived ID and messageRead state");
+  Serial.println(idSaved);
+  Serial.println(wasMessageRead);
 }
 
+/**
+ *  Fades the LEDS in and out when you have an unread message
+ **/
 void fadeLEDS()
 {
   for (int i = 0; i < NUM_LEDS; i++)
@@ -260,7 +321,10 @@ void loop()
         leds[i] = CRGB::Black;
       }
       FastLED.show();
+      Serial.println("Setting wasMessageRead to true in memory");
+      EEPROM.write(READ_ADDR, true);
       wasMessageRead = true;
+      EEPROM.commit();
     }
     else
     {

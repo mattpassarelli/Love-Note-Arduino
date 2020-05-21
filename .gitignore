@@ -4,6 +4,5 @@
 .vscode/launch.json
 .vscode/ipch
 src/secrets.h
-src/CACert.ino
-src/CertToESP8266.py
 src/LoveNoteCert.cer
+src/CACert.h

@@ -8,6 +8,7 @@
 #include <ArduinoJson.h>
 #include "secrets.h"
 #include "FastLED.h"
+#include "CACert.h"
 
 #define NUM_LEDS 18
 #define ID_ADDR 142
@@ -26,8 +27,12 @@ const int LEDPin = D7;
 const int SCREEN_WIDTH = 128;
 const char *ssid = _ssid;
 const char *password = _password;
-const String url = _url;
+const bool isMatt = true; //true for Matt, false for Rayanne's box
+const String url = isMatt ? _mattURL : _rayanneURL;
 const char *host = "love-note-backend.herokuapp.com";
+const int redLED = isMatt ? 22 : 230;
+const int greenLED = isMatt ? 227 : 108;
+const int blueLED = isMatt ? 0 : 173;
 
 //Other variables
 int fadeAmount = 5;
@@ -281,7 +286,7 @@ void fadeLEDS()
 {
   for (int i = 0; i < NUM_LEDS; i++)
   {
-    leds[i].setRGB(255, 0, 0); // setRGB functions works by setting
+    leds[i].setRGB(redLED, greenLED, blueLED); // setRGB functions works by setting
                                // (RED value 0-255, GREEN value 0-255, BLUE value 0-255)
                                // RED = setRGB(255,0,0)
                                // GREEN = setRGB(0,255,0)

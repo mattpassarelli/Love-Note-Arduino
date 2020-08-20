@@ -25,9 +25,9 @@ DynamicJsonDocument doc(capacity);
 const int readMessagePin = D5;
 const int LEDPin = D7;
 const int SCREEN_WIDTH = 128;
-const char *ssid = _ssid;
-const char *password = _password;
-const bool isMatt = true; //true for Matt, false for Rayanne's box
+const bool isMatt = false; //true for Matt, false for Rayanne's box
+const char *ssid = isMatt ? _mattssid : _rayannessid;
+const char *password = isMatt ? _mattpassword : _rayannepassword;
 const String url = isMatt ? _mattURL : _rayanneURL;
 const char *host = "love-note-backend.herokuapp.com";
 const int redLED = isMatt ? 22 : 230;
@@ -52,8 +52,14 @@ extern const unsigned int caCertLen;
  **/
 void wifiConnect()
 {
+  Serial.print("WiFi status is: ");
+  Serial.println(WiFi.status());
+  
   if (WiFi.status() != WL_CONNECTED)
   {
+    Serial.print("Attempting to connect to SSID: ");
+    Serial.println(isMatt ? _mattssid : _rayannessid);
+
     oled.drawStringMaxWidth(0, 0, SCREEN_WIDTH, "Connecting to WiFi network...");
     WiFi.begin(ssid, password);
 
@@ -61,6 +67,9 @@ void wifiConnect()
     {
       delay(500);
     }
+  }
+  else {
+    Serial.println("WiFi connected");
   }
 }
 

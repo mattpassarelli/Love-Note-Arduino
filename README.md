@@ -8,6 +8,11 @@ expand this into an app that handles more than 2 users, but I want a private ver
 
 With that, I do have ideas on how to expand this into an actual product, but will require pretty significant reworks of my backend (obviously, because this is only for 2 people right now).
 
+
+
+I have a cool demo video of this whole project on my Youtube channel here :), https://www.youtube.com/watch?v=Cdj1MZtP76Q
+
+
 # How it works
 
 The Arduino is configured to run the exact same code for both boxes, with the only differences being the specific endpoint it looks to for messages and the color of the LEDs when they pulse.
